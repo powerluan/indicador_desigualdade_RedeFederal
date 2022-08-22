@@ -1,0 +1,275 @@
+---
+title: "Análise exploratória dos indicadores de desigualdade na Rede Federal nos anos de 2019 e 2020"
+author: "Luan Matheus Moreira"
+date: "21/08/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Algoritmo para Ano 2019
+
+```{R, warning = FALSE, message = FALSE, dpi = 500, results = "assis"}
+library(tidyverse)
+
+# Localização do banco de dados.
+setwd('D:/Google Drive/Cursos/Realizados/Docência/Doutorado em Educação/4_Disciplinas/Tópicos Especiais em Políticas da Educação/Artigo/Algoritmo')
+
+# Carregamento dos dados
+dados_2019 = read.csv2('2019 - Microdados Eficiência Acadêmica.csv')
+
+
+### Desenvolvimento do indicador relacionado à raça/cor.
+
+# Limpeza dos dados
+dados_2019_trat_rc = dados_2019 %>%
+  # Seleção de cursos presenciais
+  filter(Modalidade.de.Ensino == 'EducaÃ§Ã£o Presencial') %>%
+  # Transforma Evadidos = 0 e Não Evadidos = 1
+  mutate(Categoria.da.SituaÃ.Ã.o = ifelse(Categoria.da.SituaÃ.Ã.o == 'Evadidos', 0, 1)) %>%
+  # Seleção de estudantes que declararam cor/raça
+  filter(Cor...RaÃ.a != 'NÃ£o declarada') %>%
+  # Tranforma Não brancos = 1 e Brancos = 0
+  mutate(Cor...RaÃ.a = ifelse(Cor...RaÃ.a == 'Branca', 1, 2)) %>%
+  # Seleção das variáveis de interesse
+  select(Categoria.da.SituaÃ.Ã.o, Cor...RaÃ.a) %>%
+  # Renomear variáveis
+  rename(Desempenho_Escolar = Categoria.da.SituaÃ.Ã.o, Cor_Raca = Cor...RaÃ.a)
+
+# Cálculo do indicador
+n_brancos_2019 = sum(select(filter(dados_2019_trat_rc, Cor_Raca == '2'), Cor_Raca)) / 2
+brancos_2019 = sum(select(filter(dados_2019_trat_rc, Cor_Raca == '1'), Cor_Raca))
+n_brancos_eva_2019 = sum(select(filter(filter(dados_2019_trat_rc, Cor_Raca == '2'), Desempenho_Escolar == '0'), Cor_Raca)) / 2
+brancos_eva_2019 = sum(select(filter(filter(dados_2019_trat_rc, Cor_Raca == '1'), Desempenho_Escolar == '0'), Cor_Raca))
+
+delta_rc_2019 = (n_brancos_eva_2019/n_brancos_2019) - (brancos_eva_2019/brancos_2019)
+
+
+### Desenvolvimento do indicador relacionado ao sexo.
+
+# Limpeza dos dados
+dados_2019_trat_sexo = dados_2019 %>%
+  # Seleção de cursos presenciais
+  filter(Modalidade.de.Ensino == 'EducaÃ§Ã£o Presencial') %>%
+  # Transforma Evadidos = 0 e Não Evadidos = 1
+  mutate(Categoria.da.SituaÃ.Ã.o = ifelse(Categoria.da.SituaÃ.Ã.o == 'Evadidos', 0, 1)) %>%
+  # Seleção de estudantes com sexo declarado
+  filter(Sexo != '') %>%
+  # Transforma Feminino = 1 e Masculino = 0
+  mutate(Sexo = ifelse(Sexo == 'Masculino', 1, 2)) %>%
+  # Seleção das variáveis de interesse
+  select(Categoria.da.SituaÃ.Ã.o, Sexo) %>%
+  # Renomear variáveis
+  rename(Desempenho_Escolar = Categoria.da.SituaÃ.Ã.o)
+
+# Cálculo do indicador
+feminino_2019 = sum(select(filter(dados_2019_trat_sexo, Sexo == '2'), Sexo)) / 2
+masculino_2019 = sum(select(filter(dados_2019_trat_sexo, Sexo == '1'), Sexo))
+fem_eva_2019 = sum(select(filter(filter(dados_2019_trat_sexo, Sexo == '2'), Desempenho_Escolar == '0'), Sexo)) / 2
+masc_eva_2019 = sum(select(filter(filter(dados_2019_trat_sexo, Sexo == '1'), Desempenho_Escolar == '0'), Sexo))
+
+delta_sexo_2019 = (fem_eva_2019/feminino_2019) - (masc_eva_2019/masculino_2019)
+
+
+### Desenvolvimento do indicador relacionado à renda.
+
+# Limpeza dos dados
+dados_2019_trat_renda = dados_2019 %>%
+  # Seleção de cursos presenciais
+  filter(Modalidade.de.Ensino == 'EducaÃ§Ã£o Presencial') %>%
+  # Transforma Evadidos = 0 e Não Evadidos = 1
+  mutate(Categoria.da.SituaÃ.Ã.o = ifelse(Categoria.da.SituaÃ.Ã.o == 'Evadidos', 0, 1)) %>%
+  # Seleção de estudantes que declararam renda
+  filter(Renda.Familiar != 'NÃ£o Declarada') %>%
+  #Transforma 0<RFP<=0,5 = 1
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '0<RFP<=0,5', 2, Renda.Familiar)) %>%
+  #Transforma 0,5<RFP<=1 = 2
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '0,5<RFP<=1', 0, Renda.Familiar)) %>%
+  #Transforma 1<RFP<=1,5 = 3
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '1<RFP<=1,5', 0, Renda.Familiar)) %>%
+  #Transforma 1,5<RFP<=2,5 = 4
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '1,5<RFP<=2,5', 0, Renda.Familiar)) %>%
+  #Transforma 2,5<RFP<=3,5 = 5
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '2,5<RFP<=3,5', 0, Renda.Familiar)) %>%
+  #Transforma RFP>3,5 = 6
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == 'RFP>3,5', 1, Renda.Familiar)) %>%
+  # Seleção das variáveis de interesse
+  select(Categoria.da.SituaÃ.Ã.o, Renda.Familiar) %>%
+  # Renomear variáveis
+  rename(Desempenho_Escolar = Categoria.da.SituaÃ.Ã.o, Renda = Renda.Familiar) %>%
+  # Tranformar coluna Renda para numérico
+  transform(Renda = as.numeric(Renda))
+
+# Cálculo do indicador
+menor_renda_2019 = sum(select(filter(dados_2019_trat_renda, Renda == '2'), Renda)) / 2
+maior_renda_2019 = sum(select(filter(dados_2019_trat_renda, Renda == '1'), Renda))
+menor_renda_eva_2019 = sum(select(filter(filter(dados_2019_trat_renda, Renda == '2'), Desempenho_Escolar == '0'), Renda)) / 2
+maior_renda_eva_2019 = sum(select(filter(filter(dados_2019_trat_renda, Renda == '1'), Desempenho_Escolar == '0'), Renda))
+
+delta_renda_2019 = (menor_renda_eva_2019/menor_renda_2019) - (maior_renda_eva_2019/maior_renda_2019)
+ 
+  
+```
+
+# Algoritmo para Ano 2020
+
+```{R, warning = FALSE, message = FALSE, dpi = 500, results = "assis"}
+library(tidyverse)
+
+# Localização do banco de dados.
+setwd('D:/Google Drive/Cursos/Realizados/Docência/Doutorado em Educação/4_Disciplinas/Tópicos Especiais em Políticas da Educação/Artigo/Algoritmo')
+
+# Carregamento dos dados
+dados_2020 = read.csv2('2020 - Microdados Eficiência Acadêmica.csv')
+
+
+### Desenvolvimento do indicador relacionado à raça/cor.
+
+# Limpeza dos dados
+dados_2020_trat_rc = dados_2020 %>%
+  # Seleção de cursos presenciais
+  filter(Modalidade.de.Ensino == 'EducaÃ§Ã£o Presencial') %>%
+  # Transforma Evadidos = 0 e Não Evadidos = 1
+  mutate(Categoria.de.SituaÃ.Ã.o = ifelse(Categoria.de.SituaÃ.Ã.o == 'Evadidos', 0, 1)) %>%
+  # Seleção de estudantes que declararam cor/raça
+  filter(Cor.RaÃ.a != 'NÃƒO DECLARADA') %>%
+  # Tranforma Não brancos = 1 e Brancos = 0
+  mutate(Cor.RaÃ.a = ifelse(Cor.RaÃ.a == 'BRANCA', 1, 2)) %>%
+  # Seleção das variáveis de interesse
+  select(Categoria.de.SituaÃ.Ã.o, Cor.RaÃ.a) %>%
+  # Renomear variáveis
+  rename(Desempenho_Escolar = Categoria.de.SituaÃ.Ã.o, Cor_Raca = Cor.RaÃ.a)
+
+# Cálculo do indicador
+n_brancos_2020 = sum(select(filter(dados_2020_trat_rc, Cor_Raca == '2'), Cor_Raca)) / 2
+brancos_2020 = sum(select(filter(dados_2020_trat_rc, Cor_Raca == '1'), Cor_Raca))
+n_brancos_eva_2020 = sum(select(filter(filter(dados_2020_trat_rc, Cor_Raca == '2'), Desempenho_Escolar == '0'), Cor_Raca)) / 2
+brancos_eva_2020 = sum(select(filter(filter(dados_2020_trat_rc, Cor_Raca == '1'), Desempenho_Escolar == '0'), Cor_Raca))
+
+delta_rc_2020 = (n_brancos_eva_2020/n_brancos_2020) - (brancos_eva_2020/brancos_2020)
+
+
+### Desenvolvimento do indicador relacionado ao sexo.
+
+# Limpeza dos dados
+dados_2020_trat_sexo = dados_2020 %>%
+  # Seleção de cursos presenciais
+  filter(Modalidade.de.Ensino == 'EducaÃ§Ã£o Presencial') %>%
+  # Transforma Evadidos = 0 e Não Evadidos = 1
+  mutate(Categoria.de.SituaÃ.Ã.o = ifelse(Categoria.de.SituaÃ.Ã.o == 'Evadidos', 0, 1)) %>%
+  # Seleção de estudantes com sexo declarado
+  filter(Sexo != 'S/I') %>%
+  # Transforma Feminino = 1 e Masculino = 0
+  mutate(Sexo = ifelse(Sexo == 'M', 1, 2)) %>%
+  # Seleção das variáveis de interesse
+  select(Categoria.de.SituaÃ.Ã.o, Sexo) %>%
+  # Renomear variáveis
+  rename(Desempenho_Escolar = Categoria.de.SituaÃ.Ã.o)
+
+# Cálculo do indicador
+feminino_2020 = sum(select(filter(dados_2020_trat_sexo, Sexo == '2'), Sexo)) / 2
+masculino_2020 = sum(select(filter(dados_2020_trat_sexo, Sexo == '1'), Sexo))
+fem_eva_2020 = sum(select(filter(filter(dados_2020_trat_sexo, Sexo == '2'), Desempenho_Escolar == '0'), Sexo)) / 2
+masc_eva_2020 = sum(select(filter(filter(dados_2020_trat_sexo, Sexo == '1'), Desempenho_Escolar == '0'), Sexo))
+
+delta_sexo_2020 = (fem_eva_2020/feminino_2020) - (masc_eva_2020/masculino_2020)
+
+
+### Desenvolvimento do indicador relacionado à renda.
+
+# Limpeza dos dados
+dados_2020_trat_renda = dados_2020 %>%
+  # Seleção de cursos presenciais
+  filter(Modalidade.de.Ensino == 'EducaÃ§Ã£o Presencial') %>%
+  # Transforma Evadidos = 0 e Não Evadidos = 1
+  mutate(Categoria.de.SituaÃ.Ã.o = ifelse(Categoria.de.SituaÃ.Ã.o == 'Evadidos', 0, 1)) %>%
+  # Seleção de estudantes que declararam renda
+  filter(Renda.Familiar != 'NÃ£o declarada') %>%
+  #Transforma 0<RFP<=0,5 = 1
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '0<RFP<=0,5', 2, Renda.Familiar)) %>%
+  #Transforma 0,5<RFP<=1 = 2
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '0,5<RFP<=1', 0, Renda.Familiar)) %>%
+  #Transforma 1<RFP<=1,5 = 3
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '1<RFP<=1,5', 0, Renda.Familiar)) %>%
+  #Transforma 1,5<RFP<=2,5 = 4
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '1,5<RFP<=2,5', 0, Renda.Familiar)) %>%
+  #Transforma 2,5<RFP<=3,5 = 5
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == '2,5<RFP<=3,5', 0, Renda.Familiar)) %>%
+  #Transforma RFP>3,5 = 6
+  mutate(Renda.Familiar = ifelse(Renda.Familiar == 'RFP>3,5', 1, Renda.Familiar)) %>%
+  # Seleção das variáveis de interesse
+  select(Categoria.de.SituaÃ.Ã.o, Renda.Familiar) %>%
+  # Renomear variáveis
+  rename(Desempenho_Escolar = Categoria.de.SituaÃ.Ã.o, Renda = Renda.Familiar) %>%
+  # Tranformar coluna Renda para numérico
+  transform(Renda = as.numeric(Renda))
+
+# Cálculo do indicador
+menor_renda_2020 = sum(select(filter(dados_2020_trat_renda, Renda == '2'), Renda)) / 2
+maior_renda_2020 = sum(select(filter(dados_2020_trat_renda, Renda == '1'), Renda))
+menor_renda_eva_2020 = sum(select(filter(filter(dados_2020_trat_renda, Renda == '2'), Desempenho_Escolar == '0'), Renda)) / 2
+maior_renda_eva_2020 = sum(select(filter(filter(dados_2020_trat_renda, Renda == '1'), Desempenho_Escolar == '0'), Renda))
+
+delta_renda_2020 = (menor_renda_eva_2020/menor_renda_2020) - (maior_renda_eva_2020/maior_renda_2020)
+ 
+  
+```
+
+# Gráficos
+
+```{R, warning = FALSE, message = FALSE, dpi = 500, results = "assis"}
+# Gráfico para Raça/cor
+
+graph_rc = data.frame(Ano = c('2019', '2020'),
+                      Indicador = c(format(round(delta_rc_2019, 6), nsmall = 6), format(round(delta_rc_2020, 6), nsmall = 6))) %>%
+  # Tranformar coluna Indicador para numérico
+  transform(Indicador = as.numeric(Indicador))
+
+ggplot(graph_rc, aes(x = Ano, y = Indicador, fill = Ano)) +
+  geom_col(position = "dodge") +
+  theme(legend.position="none", axis.text.y = element_blank()) + 
+  geom_text(
+    aes(label = Indicador),
+    colour = "white", size = 4,
+    vjust = 1.5, position = position_dodge(.9)) +
+  jpeg(filename = 'raca_cor.jpeg', width = 10, height = 8, units = "cm",pointsize = 12, "lzw",res = 1200)
+
+
+# Gráfico para Sexo
+
+graph_sexo = data.frame(Ano = c('2019', '2020'),
+                      Indicador = c(format(round(delta_sexo_2019, 6), nsmall = 6), format(round(delta_sexo_2020, 6), nsmall = 6))) %>%
+  # Tranformar coluna Indicador para numérico
+  transform(Indicador = as.numeric(Indicador))
+
+ggplot(graph_sexo, aes(x = Ano, y = Indicador, fill = Ano)) +
+  geom_col(position = "identity") +
+  theme(legend.position="none", axis.text.y = element_blank()) + 
+  geom_text(
+    aes(label = Indicador),
+    colour = "white", size = 4,
+    vjust = -0.5, position = position_dodge(.9)) +
+  jpeg(filename = 'sexo.jpeg', width = 10, height = 8, units = "cm",pointsize = 12, "lzw",res = 1200)
+
+
+# Gráfico para Renda
+
+graph_renda = data.frame(Ano = c('2019', '2020'),
+                      Indicador = c(format(round(delta_renda_2019, 6), nsmall = 6), format(round(delta_renda_2020, 6), nsmall = 6))) %>%
+  # Tranformar coluna Indicador para numérico
+  transform(Indicador = as.numeric(Indicador))
+
+ggplot(graph_renda, aes(x = Ano, y = Indicador, fill = Ano)) +
+  geom_col(position = "dodge") +
+  theme(legend.position="none", axis.text.y = element_blank()) + 
+  geom_text(
+    aes(label = Indicador),
+    colour = "white", size = 4,
+    vjust = 1.5, position = position_dodge(.9)) +
+  jpeg(filename = 'renda.jpeg', width = 10, height = 8, units = "cm",pointsize = 12, "lzw",res = 1200)
+
+  
+```
+
